@@ -67,7 +67,7 @@ def write_mail(fname, add_file, email_id, passwd, attach):
         click.clear()
         click.echo('please enter the message to be sent \n')
         msg = sys.stdin.readlines()
-        sub = input('enter subject for email \n>> ')
+        sub = click.prompt('enter subject for email \n>> ')
         msg = ''.join([line for line in msg])
 
         srv.starttls()
@@ -106,19 +106,20 @@ def cli_face(fname, target_file, attach):
     click.echo()
     email_pat = re.compile('\w+@\w+\.[a-z]+', re.ASCII)
     while True:
-        email_id = input('enter the email id \n>> ')
+        email_id = click.prompt('enter the email id \n>> ')
         passwd = keyring.get_password(service_id, email_id)
 
         if passwd:
             if click.prompt('enter del to delete the mail and password, anything else to proceed \n>> ').lower() == 'del':
                 keyring.delete_password(service_id, email_id)
+                click.clear()
                 continue
             write_mail(fname=fname, add_file=target_file,
                        email_id=email_id, passwd=passwd, attach=attach)
             click.echo('mailed successfully!')
             sys.exit()
         elif email_pat.match(email_id):
-            keyring.set_password(service_id, email_id, input(
+            keyring.set_password(service_id, email_id, click.prompt(
                 'new email id? enter password \n>> '))
         else:
             click.clear()
