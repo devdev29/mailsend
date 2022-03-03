@@ -10,7 +10,6 @@ from time import sleep
 import keyring
 import pandas as pd
 import click
-#from progressbar import ProgressBar
 
 click.clear()
 service_id = 'MAILSEND'
