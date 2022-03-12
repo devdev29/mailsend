@@ -77,7 +77,7 @@ def write_mail(fname, add_file, email_id, passwd, attach):
         click.echo('please enter the message to be sent \n')
         msg = sys.stdin.readlines()
         msg = ''.join([line for line in msg])
-        sub = click.prompt('enter subject for email \n>> ')
+        sub = click.prompt('enter subject for email \n', prompt_suffix='>> ')
 
         srv.starttls()
         srv.login(email_id, passwd)
@@ -110,7 +110,7 @@ def get_credentials():
         passwd = keyring.get_password(service_id, email_id)
         if passwd:
             res = click.prompt(
-                'type del to delete this email anything else to continue \n', prompt_suffix='>> ', default=None)
+                'type del to delete this email anything else to continue \n', prompt_suffix='>> ', default='', show_default=False)
             if res.lower() == 'del':
                 keyring.delete_password(service_id, email_id)
                 click.echo('deleted!')
@@ -128,8 +128,9 @@ def send_regular_mail(ctx, _, value):
         p = ctx.params
         if click.confirm('are you sure you want to send a regular email?'):
             email_id, passwd = get_credentials()
-            write_mail(fname=p.get('fname'), add_file=p.get(
+            write_mail(fname=None, add_file=p.get(
                 'target_file'), email_id=email_id, passwd=passwd, attach=p.get('attach'))
+            ctx.exit('mailed succesfully!')
         else:
             ctx.exit('Aborted!')
 
@@ -147,6 +148,7 @@ def cli_face(target_file, fname, attach):
     email_id, passwd = get_credentials()
     write_mail(fname=fname, add_file=target_file,
                email_id=email_id, passwd=passwd, attach=attach)
+    sys.exit('mailed succesfully!')
 
 
 try:
