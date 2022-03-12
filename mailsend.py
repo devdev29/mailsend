@@ -136,9 +136,14 @@ def send_regular_mail(ctx, _, value):
 
 @click.command()
 @click.argument('target_file', type=click.Path(exists=True))
-@click.option('--attach', '-a', 'attach', type=click.Path(exists=True))
-@click.option('fname', '--fname', '-f', type=click.Path(exists=True), callback=send_regular_mail)
+@click.option('--attach', '-a', 'attach', type=click.Path(exists=True), help='path to attachment file')
+@click.option('fname', '--fname', '-f', type=click.Path(exists=True), callback=send_regular_mail, help='path to the csv file')
 def cli_face(target_file, fname, attach):
+    ''' This script intends to automate mailing through gmail, just type the name of the script followed by the 
+    file that contains the list of addresses, this file is supposed to be a plain text file containing a single 
+    email address on each line. There is a also an option to add variable to your email body, just specify a csv
+    file with all the data that you want to use and put $column_name to substitute the value of the column in the
+    body. attachments are supported as well.'''
     email_id, passwd = get_credentials()
     write_mail(fname=fname, add_file=target_file,
                email_id=email_id, passwd=passwd, attach=attach)
