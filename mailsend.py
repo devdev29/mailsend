@@ -99,6 +99,7 @@ def write_mail(fname, add_file, email_id, passwd, attach):
                 for address in add_list:
                     srv.sendmail(email_id, address, create_mail(
                         msg, email_id, address, sub, attach))
+                    sleep(1.0)
 
     finally:
         srv.quit()
