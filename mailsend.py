@@ -1,4 +1,3 @@
-import re
 import smtplib
 import sys
 from email import encoders
@@ -14,6 +13,19 @@ import click
 click.clear()
 service_id = 'MAILSEND'
 
+click.echo(click.style('''
+                    _ __                    __
+   ____ ___  ____ _(_) /_______  ____  ____/ /
+  / __ `__ \/ __ `/ / / ___/ _ \/ __ \/ __  / 
+ / / / / / / /_/ / / (__  )  __/ / / / /_/ /  
+/_/ /_/ /_/\__,_/_/_/____/\___/_/ /_/\__,_/   
+                                              
+''', fg='green'))
+click.echo('welcome to mailsend!')
+click.echo('written by Devansh Joshi')
+click.echo("you may need google app passwords to run this script read about them here- https://support.google.com/accounts/answer/185833?hl=en")
+click.echo()
+
 
 def extract_names(temp, in_cols):
     found = set()
@@ -24,11 +36,9 @@ def extract_names(temp, in_cols):
     return found
 
 
-def extract_file_data(fname, only_cols=False):
+def extract_file_data(fname):
     df = pd.read_csv(fname)
     cols = set(df.columns.values)
-    if only_cols:
-        return cols
     return df, cols
 
 
@@ -94,49 +104,51 @@ def write_mail(fname, add_file, email_id, passwd, attach):
         srv.quit()
 
 
+def get_credentials():
+    while True:
+        email_id = click.prompt('enter your email id \n', prompt_suffix='>> ')
+        passwd = keyring.get_password(service_id, email_id)
+        if passwd:
+            res = click.prompt(
+                'type del to delete this email anything else to continue \n', prompt_suffix='>> ', default=None)
+            if res.lower() == 'del':
+                keyring.delete_password(service_id, email_id)
+                click.echo('deleted!')
+                continue
+            return email_id, passwd
+        else:
+            passwd = click.prompt(
+                'new email? enter password \n', prompt_suffix='>> ')
+            keyring.set_password(service_id, email_id, passwd)
+            return email_id, passwd
+
+
+def send_regular_mail(ctx, _, value):
+    if not value:
+        p = ctx.params
+        if click.confirm('are you sure you want to send a regular email?'):
+            email_id, passwd = get_credentials()
+            write_mail(fname=p.get('fname'), add_file=p.get(
+                'target_file'), email_id=email_id, passwd=passwd, attach=p.get('attach'))
+        else:
+            ctx.exit('Aborted!')
+
+
 @click.command()
 @click.argument('target_file', type=click.Path(exists=True))
-@click.option('fname', '--fname', '-f', type=click.Path(exists=True))
 @click.option('--attach', '-a', 'attach', type=click.Path(exists=True))
+@click.option('fname', '--fname', '-f', type=click.Path(exists=True), callback=send_regular_mail)
 def cli_face(target_file, fname, attach):
-    click.echo(click.style('''
-                    _ __                    __
-   ____ ___  ____ _(_) /_______  ____  ____/ /
-  / __ `__ \/ __ `/ / / ___/ _ \/ __ \/ __  / 
- / / / / / / /_/ / / (__  )  __/ / / / /_/ /  
-/_/ /_/ /_/\__,_/_/_/____/\___/_/ /_/\__,_/   
-                                              
-''', fg='green'))
-    click.echo('welcome to mailsend!')
-    click.echo('written by Devansh Joshi')
-    click.echo("you may need google app passwords to run this script read about them here- https://support.google.com/accounts/answer/185833?hl=en")
-    click.echo()
-    email_pat = re.compile('\w+@\w+\.[a-z]+', re.ASCII)
-    while True:
-        email_id = click.prompt('enter the email id \n>> ')
-        passwd = keyring.get_password(service_id, email_id)
-
-        if passwd:
-            if click.prompt('enter del to delete the mail and password, anything else to proceed \n>> ').lower() == 'del':
-                keyring.delete_password(service_id, email_id)
-                click.clear()
-                continue
-            write_mail(fname=fname, add_file=target_file,
-                       email_id=email_id, passwd=passwd, attach=attach)
-            click.echo('mailed successfully!')
-            sys.exit()
-        elif email_pat.match(email_id):
-            keyring.set_password(service_id, email_id, click.prompt(
-                'new email id? enter password \n>> '))
-        else:
-            click.clear()
-            click.echo('invalid input')
+    email_id, passwd = get_credentials()
+    write_mail(fname=fname, add_file=target_file,
+               email_id=email_id, passwd=passwd, attach=attach)
 
 
 try:
     cli_face()
 except smtplib.SMTPAuthenticationError:
     click.echo('Please check the username and password entered!')
+    click.echo('... or if you have 2 factor authentication turned on then you need to use an app password instead of your regular one.')
 except TypeError:
     click.echo(
         'one or both of the files seem to be the wrong type, please check them again')
