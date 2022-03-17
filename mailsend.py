@@ -1,4 +1,4 @@
-from email.generator import Generator
+from typing import Generator
 import smtplib
 import sys
 from email import encoders
@@ -132,9 +132,11 @@ def send_regular_mail(ctx, _, value):
         click.echo('Please check the username and password entered!')
         click.echo(
             '... or if you have 2 factor authentication turned on then you need to use an app password instead of your regular one.')
-        keyring.delete_password(service_id, email_id, passwd)
+        keyring.delete_password(service_id, email_id)
+        ctx.exit()
     except TypeError:
         click.echo('The file seems to be of the wrong type!')
+        ctx.exit()
 
 
 @click.command()
@@ -156,10 +158,12 @@ def cli_face(target_file, fname, attach) -> None:
         click.echo('Please check the username and password entered!')
         click.echo(
             '... or if you have 2 factor authentication turned on then you need to use an app password instead of your regular one.')
-        keyring.delete_password(service_id, email_id, passwd)
+        keyring.delete_password(service_id, email_id)
+        sys.exit()
     except TypeError:
         click.echo(
             'one or both of the files seem to be the wrong type, please check them again!')
+        sys.exit()
 
 
 cli_face()
