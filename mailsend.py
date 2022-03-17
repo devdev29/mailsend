@@ -93,13 +93,19 @@ def write_mail(fname, add_file, email_id, passwd, attach):
                 srv.sendmail(email_id, address, create_mail(
                     body, email_id, address, sub, attach))
                 sleep(1.0)
-            else:
-                with open(add_file, 'r') as afile:
-                    add_list = [add.strip() for add in afile.readlines()]
-                for address in add_list:
-                    srv.sendmail(email_id, address, create_mail(
-                        msg, email_id, address, sub, attach))
-                    sleep(1.0)
+        else:
+            with open(add_file, 'r') as afile:
+                add_list = [add.strip() for add in afile.readlines()]
+            for address in add_list:
+                if confirm:
+                    click.echo(msg)
+                    if click.confirm('are you sure you want to proceed with this email?'):
+                        confirm = False
+                    else:
+                        sys.exit('Aborted!')
+                srv.sendmail(email_id, address, create_mail(
+                    msg, email_id, address, sub, attach))
+                sleep(1.0)
 
     finally:
         srv.quit()
