@@ -62,10 +62,11 @@ def create_mail(msg: str, sender: str, target: str, sub: str, attach: str) -> st
     message['Subject'] = sub
     message.attach(MIMEText(msg, 'plain'))
     if attach:
+        at = MIMEBase('application', 'octate-stream')
         with open(attach, 'r') as atfile:
-            at = MIMEBase('application', 'octate-stream')
             at.set_payload(atfile.read())
-            encoders.encode_base64(at)
+        encoders.encode_base64(at)
+        at.add_header('Content-Disposition', f'attachment; filename={attach}')
         message.attach(at)
     return message.as_string()
 
@@ -74,16 +75,15 @@ def write_mail(fname: str, add_file: str, email_id: str, passwd: str, attach: st
     srv = smtplib.SMTP('smtp.gmail.com', 587)
     confirm = True
     try:
-        if fname:
-            click.clear()
-            click.echo('please enter the message to be sent \n')
-            msg = sys.stdin.readlines()
-            msg = ''.join([line for line in msg])
-            sub = click.prompt('enter subject for email \n',
-                               prompt_suffix='>> ')
+        click.clear()
+        click.echo('please enter the message to be sent \n')
+        msg = sys.stdin.readlines()
+        msg = ''.join([line for line in msg])
+        sub = click.prompt('enter subject for email \n', prompt_suffix='>> ')
 
-            srv.starttls()
-            srv.login(email_id, passwd)
+        srv.starttls()
+        srv.login(email_id, passwd)
+        if fname:
             df, cols = extract_file_data(fname)
             for address, body in format_text(msg, df, add_file, cols):
                 if confirm:
@@ -91,7 +91,7 @@ def write_mail(fname: str, add_file: str, email_id: str, passwd: str, attach: st
                     if click.confirm('are you sure you want to proceed with this email?'):
                         confirm = False
                     else:
-                        sys.eexit('Aborted!')
+                        sys.exit('Aborted!')
                 srv.sendmail(from_addr=email_id, to_addrs=address, msg=create_mail(
                     msg=body, sender=email_id, target=address, sub=sub, attach=attach))
                 sleep(1.0)
@@ -132,43 +132,31 @@ def get_credentials() -> tuple:
             return email_id, passwd
 
 
-def send_regular_mail(ctx, _, value):
-    try:
-        if not value:
-            p = ctx.params
-            if click.confirm('are you sure you want to send a regular email?'):
-                email_id, passwd = get_credentials()
-                write_mail(fname=None, add_file=p.get(
-                    'target_file'), email_id=email_id, passwd=passwd, attach=p.get('attach'))
-                ctx.exit('mailed succesfully!')
-            else:
-                ctx.exit('Aborted!')
-    except smtplib.SMTPAuthenticationError:
-        click.echo('Please check the username and password entered!')
-        click.echo(
-            '... or if you have 2 factor authentication turned on then you need to use an app password instead of your regular one.')
-        keyring.delete_password(service_id, email_id)
-        ctx.exit()
-    except TypeError:
-        click.echo('The file seems to be of the wrong type!')
-        ctx.exit()
-
-
 @click.command()
 @click.argument('target_file', type=click.Path(exists=True))
-@click.option('--attach', '-a', 'attach', type=click.Path(exists=True), help='path to attachment file')
-@click.option('fname', '--fname', '-f', type=click.Path(exists=True), callback=send_regular_mail, help='path to the csv file')
-def cli_face(target_file, fname, attach) -> None:
+@click.option('-a', '--attach', type=click.Path(exists=True), help='path to attachment file')
+@click.option('-f', '--fname', type=click.Path(exists=True), help='path to the csv file')
+def cli_face(target_file, attach, fname) -> None:
     ''' This script intends to automate mailing through gmail, just type the name of the script followed by the 
     file that contains the list of addresses, this file is supposed to be a plain text file containing a single 
     email address on each line. There is a also an option to add variables to your email body, just specify a csv
     file with all the data that you want to use and type $column_name in the body to substitute the value of the column. 
     attachments are supported as well.'''
     try:
-        email_id, passwd = get_credentials()
-        write_mail(fname=fname, add_file=target_file,
-                   email_id=email_id, passwd=passwd, attach=attach)
-        sys.exit('mailed succesfully!')
+        if fname:
+            email_id, passwd = get_credentials()
+            write_mail(fname=fname, add_file=target_file,
+                       email_id=email_id, passwd=passwd, attach=attach)
+            sys.exit('mailed succesfully!')
+        else:
+            if click.confirm('are you sure you want to send a regular email?'):
+                email_id, passwd = get_credentials()
+                write_mail(fname=fname, add_file=target_file,
+                           email_id=email_id, passwd=passwd, attach=attach)
+                sys.exit('mailed successfully!')
+            else:
+                sys.exit('Aborted!')
+
     except smtplib.SMTPAuthenticationError:
         click.echo('Please check the username and password entered!')
         click.echo(
