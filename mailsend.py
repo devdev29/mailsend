@@ -74,25 +74,40 @@ def write_mail(fname: str, add_file: str, email_id: str, passwd: str, attach: st
     srv = smtplib.SMTP('smtp.gmail.com', 587)
     confirm = True
     try:
-        click.clear()
-        click.echo('please enter the message to be sent \n')
-        msg = sys.stdin.readlines()
-        msg = ''.join([line for line in msg])
-        sub = click.prompt('enter subject for email \n', prompt_suffix='>> ')
+        if fname:
+            click.clear()
+            click.echo('please enter the message to be sent \n')
+            msg = sys.stdin.readlines()
+            msg = ''.join([line for line in msg])
+            sub = click.prompt('enter subject for email \n',
+                               prompt_suffix='>> ')
 
-        srv.starttls()
-        srv.login(email_id, passwd)
-        df, cols = extract_file_data(fname)
-        for address, body in format_text(msg, df, add_file, cols):
-            if confirm:
-                click.echo(body)
-                if click.confirm('are you sure you want to proceed with this email?'):
-                    confirm = False
-                else:
-                    sys.exit('Aborted!')
-            srv.sendmail(email_id, address, create_mail(
-                body, email_id, address, sub, attach))
-            sleep(1.0)
+            srv.starttls()
+            srv.login(email_id, passwd)
+            df, cols = extract_file_data(fname)
+            for address, body in format_text(msg, df, add_file, cols):
+                if confirm:
+                    click.echo(body)
+                    if click.confirm('are you sure you want to proceed with this email?'):
+                        confirm = False
+                    else:
+                        sys.eexit('Aborted!')
+                srv.sendmail(from_addr=email_id, to_addrs=address, msg=create_mail(
+                    msg=body, sender=email_id, target=address, sub=sub, attach=attach))
+                sleep(1.0)
+        else:
+            with open(add_file, 'r') as afile:
+                add_list = [add.strip() for add in afile.readlines()]
+            for address in add_list:
+                if confirm:
+                    click.echo(msg)
+                    if click.confirm('are you sure you want to proceed with this email?'):
+                        confirm = False
+                        click.clear()
+                    else:
+                        sys.exit('Aborted!')
+                srv.sendmail(from_addr=email_id, to_addrs=address, msg=create_mail(
+                    msg=msg, sender=email_id, target=address, sub=sub, attach=attach))
 
     finally:
         srv.quit()
